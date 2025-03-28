@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/CS2030S.iml" filepath="$PROJECT_DIR$/.idea/CS2030S.iml" />
+      <module fileurl="file://$PROJECT_DIR$/PS1/PS1.iml" filepath="$PROJECT_DIR$/PS1/PS1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/PS2/PS2.iml" filepath="$PROJECT_DIR$/PS2/PS2.iml" />
+    </modules>
+  </component>
+</project>
