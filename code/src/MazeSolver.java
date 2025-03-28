@@ -3,7 +3,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.function.Function;
 
@@ -28,49 +27,37 @@ public class MazeSolver implements IMazeSolver {
 	// Since all fear > 0, we can use Dijkstra's algorithm
 
 	private Maze maze;
+	private int endRow;
+	private int endCol;
 	private Graph graph;
 	private PriorityQueue<ComparableRoom> estimateHeap;
-	private int[][] fearToReach;
-	private boolean[][] visited;
+	private ComparableRoom[][] roomGrid;
 
 	public class ComparableRoom implements Comparable<ComparableRoom> {
-		int row, col, fear;
+		Integer fearToReach;
+		Boolean visited = false;
 
-		public ComparableRoom(int row, int col, int fear) {
-			this.row = row;
-			this.col = col;
-			this.fear = fear;
+		public ComparableRoom(Integer fearToReach) {
+			this.fearToReach = fearToReach;
+		}
+
+		public void visit() {
+			this.visited = true;
+		}
+
+		public boolean isVisited() {
+			return this.visited;
 		}
 
 		@Override
 		public int compareTo(ComparableRoom c) {
-			if (c == null) {
-				return -1;
-			}
-			return Integer.compare(this.fear, c.fear);
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (o == null) {
-				return false;
-			}
-			if (o instanceof ComparableRoom) {
-				ComparableRoom other = (ComparableRoom) o;
-				return this.row == other.row && this.col == other.col;
-			}
-			return false;
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(row, col);
+			return this.fearToReach - c.fearToReach;
 		}
 	}
 
 	public class Edge {
 		ComparableRoom to;
-		int fear;
+		int fear = 1;
 
 		Edge(ComparableRoom to, int fear) {
 			this.to = to;
@@ -102,8 +89,12 @@ public class MazeSolver implements IMazeSolver {
 		int rows = maze.getRows();
 		int cols = maze.getColumns();
 		this.estimateHeap = new PriorityQueue<>(rows * cols);
-		this.fearToReach = new int[rows][cols];
-		this.visited = new boolean[rows][cols];
+		this.roomGrid = new ComparableRoom[rows][cols];
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
+				roomGrid[i][j] = new ComparableRoom(TRUE_WALL);
+			}
+		}
 		createGraph(maze);
 	}
 
@@ -123,14 +114,14 @@ public class MazeSolver implements IMazeSolver {
 						if (fear == EMPTY_SPACE) {
 							fear = 1;
 						}
-						this.graph.addEdge(new ComparableRoom(i, j, TRUE_WALL),
-								new ComparableRoom(newRow, newCol, TRUE_WALL), fear);
+						this.graph.addEdge(roomGrid[i][j], roomGrid[newRow][newCol], fear);
 					}
 				}
 			}
 		}
 	}
 
+	// Time to solve
 	@Override
 	public Integer pathSearch(int startRow, int startCol, int endRow, int endCol) throws Exception {
 		if (maze == null) {
@@ -141,55 +132,40 @@ public class MazeSolver implements IMazeSolver {
 			throw new IllegalArgumentException("Invalid start/end coordinate");
 		}
 
-		if (startRow == endRow && startCol == endCol) {
-			return 0;
-		}
+		this.endRow = endRow;
+		this.endCol = endCol;
 
-		// Clear previous search
-		for (int i = 0; i < maze.getRows(); i++) {
-			for (int j = 0; j < maze.getColumns(); j++) {
-				fearToReach[i][j] = TRUE_WALL;
-				visited[i][j] = false;
-			}
-		}
-		estimateHeap.clear();
-
-		ComparableRoom start = new ComparableRoom(startRow, startCol, 0);
-		fearToReach[startRow][startCol] = 0;
+		ComparableRoom start = roomGrid[startRow][startCol];
+		start.fearToReach = 0;
 		estimateHeap.add(start);
 
-		return solve(endRow, endCol);
+		return solve();
 	}
 
-	private Integer solve(int endRow, int endCol) {
+	private Integer solve() {
 		// Dijkstra's algorithm
 		while (!estimateHeap.isEmpty()) {
 			ComparableRoom curr = estimateHeap.poll();
-			int row = curr.row;
-			int col = curr.col;
-			if (visited[row][col]) {
+			if (curr.isVisited()) {
 				continue;
 			}
-			visited[row][col] = true;
+			curr.visit();
 
-			if (row == endRow && col == endCol) {
-				return fearToReach[row][col];
+			if (curr == roomGrid[endRow][endCol]) {
+				return curr.fearToReach;
 			}
 
-			for (Edge e : graph.getNeighbors(curr)) {
+			List<Edge> neighbours = graph.getNeighbors(curr);
+
+			for (Edge e : neighbours) {
 				ComparableRoom neighbour = e.to;
-				int newRow = neighbour.row;
-				int newCol = neighbour.col;
-				if (visited[newRow][newCol]) {
+				if (neighbour.isVisited()) {
 					continue;
 				}
-
-				// Relax estimates
-				int newFear = fearToReach[row][col] + e.fear;
-				if (newFear < fearToReach[newRow][newCol]) {
-					ComparableRoom newNode = new ComparableRoom(newRow, newCol, newFear);
-					fearToReach[newRow][newCol] = newFear;
-					this.estimateHeap.add(newNode);
+				int newFear = curr.fearToReach + e.fear;
+				if (newFear < neighbour.fearToReach) {
+					neighbour.fearToReach = newFear;
+					this.estimateHeap.add(neighbour);
 				}
 			}
 		}
@@ -211,13 +187,10 @@ public class MazeSolver implements IMazeSolver {
 
 	public static void main(String[] args) {
 		try {
-			Maze maze = Maze.readMaze("maze-dense.txt");
-			Maze maze2 = Maze.readMaze("haunted-maze-sample.txt");
+			Maze maze = Maze.readMaze("haunted-maze-sample.txt");
 			IMazeSolver solver = new MazeSolver();
-			solver.initialize(maze2);
-
-			System.out.println(solver.pathSearch(0, 1, 0, 5));
-			System.out.println(solver.pathSearch(1, 1, 1, 1));
+			solver.initialize(maze);
+			System.out.println(solver.pathSearch(0, 0, 0, 5));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

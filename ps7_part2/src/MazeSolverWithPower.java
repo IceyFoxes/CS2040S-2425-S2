@@ -21,6 +21,7 @@ public class MazeSolverWithPower implements IMazeSolverWithPower {
 		int row;
 		int col;
 		int depth = 0;
+		static int[] rooms;
 		int superpower = 0;
 
 		public RoomPath(int row, int col) {
