@@ -32,6 +32,7 @@ public class MazeSolver implements IMazeSolver {
 	private PriorityQueue<ComparableRoom> estimateHeap;
 	private int[][] fearToReach;
 	private boolean[][] visited;
+	private int init = 0;
 
 	public class ComparableRoom implements Comparable<ComparableRoom> {
 		int row, col, fear;
@@ -220,7 +221,7 @@ public class MazeSolver implements IMazeSolver {
 		estimateHeap.clear();
 
 		ComparableRoom start = new ComparableRoom(startRow, startCol, 0);
-		fearToReach[startRow][startCol] = 0;
+		fearToReach[startRow][startCol] = init;
 		estimateHeap.add(start);
 
 		return bonusSolve(endRow, endCol);
@@ -314,7 +315,8 @@ public class MazeSolver implements IMazeSolver {
 			Integer startToEnd = bonusSearch(startRow, startCol, endRow, endCol);
 			// Case 1:
 			if (startToSpecial != null && startToEnd != null) {
-				Integer path1 = startToSpecial + bonusSearch(sRow, sCol, endRow, endCol);
+				this.init = -1;
+				Integer path1 = bonusSearch(sRow, sCol, endRow, endCol);
 				Integer path2 = startToEnd;
 				return Math.min(path1, path2);
 			}
@@ -326,6 +328,8 @@ public class MazeSolver implements IMazeSolver {
 			return startToEnd;
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
+		} finally {
+			this.init = 0;
 		}
 		return -1; // Shouldn't reach here
 	}
@@ -369,8 +373,7 @@ public class MazeSolver implements IMazeSolver {
 							fearToReach[newRow][newCol] = newFear;
 							terminate = false;
 						}
-						System.out.println(
-								"row: " + newRow + " " + "col: " + newCol + "\n" + fearToReach[newRow][newCol]);
+						//System.out.println("row: " + newRow + " " + "col: " + newCol + "\n" + fearToReach[newRow][newCol]);
 					}
 				}
 			}
